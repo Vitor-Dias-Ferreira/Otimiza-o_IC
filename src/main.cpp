@@ -144,7 +144,44 @@ int tspGuloso(const vector<vector<int>>& matriz, int n, int origem, vector<int>&
     caminho.push_back(origem);
     return custoTotal;
 }
+// --- HEURÍSTICA DE MELHORAMENTO 2-OPT ---
+void aplicar2Opt(vector<int>& caminho, int& custoTotal, const vector<vector<int>>& matriz) {
+    bool houveMelhoria = true;
+    int tamanho = caminho.size() - 1; // O caminho tem N+1 nós (a origem repete-se no fim)
 
+    while (houveMelhoria) {
+        houveMelhoria = false;
+        
+        // Evitamos mexer na origem e no destino final (índice 0 e tamanho)
+        for (int i = 1; i < tamanho - 1; i++) {
+            for (int j = i + 1; j < tamanho; j++) {
+                
+                // Nós envolvidos na troca
+                int no_A = caminho[i - 1];
+                int no_B = caminho[i];
+                int no_C = caminho[j];
+                int no_D = caminho[j + 1];
+
+                // Custo das duas arestas atuais: (A->B) e (C->D)
+                int custoAtual = matriz[no_A][no_B] + matriz[no_C][no_D];
+                
+                // Custo das novas arestas se fizermos a troca: (A->C) e (B->D)
+                int custoNovo = matriz[no_A][no_C] + matriz[no_B][no_D];
+
+                // Se a troca diminuir o custo total da rota, aplicamos
+                if (custoNovo < custoAtual) {
+                    // Atualiza o custo total matematicamente
+                    custoTotal = custoTotal - custoAtual + custoNovo;
+                    
+                    // Inverte o sentido da sub-rota entre os índices i e j
+                    reverse(caminho.begin() + i, caminho.begin() + j + 1);
+                    
+                    houveMelhoria = true; // Força o ciclo a verificar tudo novamente
+                }
+            }
+        }
+    }
+}
 // --- FUNÇÃO PRINCIPAL ---
 
 int main() {
@@ -193,25 +230,38 @@ int main() {
     int melhorCustoGeral = INT_MAX;
     int melhorOrigemGeral = -1;
 
-    for (int i = 0; i < n; i++) {
+   for (int i = 0; i < n; i++) { 
         Resultado res;
         res.origem = i;
         
+        // Inicia o cronómetro
         auto t1 = chrono::high_resolution_clock::now();
+        
+        // 1. Gera a rota inicial com o Guloso
         res.custo = tspGuloso(matriz, n, i, res.caminho);
+        
+        //cout << "Origem " << i << " | Custo Guloso: " << res.custo; // MOSTRA O ANTES
+        
+        // 2. Melhora a rota com o 2-Opt
+        aplicar2Opt(res.caminho, res.custo, matriz);
+        
+        //cout << " -> Custo apos 2-Opt: " << res.custo << endl;      // MOSTRA O DEPOIS
+        // Para o cronómetro
         auto t2 = chrono::high_resolution_clock::now();
 
+        // Calcula o tempo total das duas operações juntas
         chrono::duration<double, std::milli> duracao = t2 - t1;
         res.tempo = duracao.count(); 
         
+        // Guarda o resultado
         resultados.push_back(res);
 
+        // Verifica se é o melhor custo até agora
         if (res.custo < melhorCustoGeral) {
             melhorCustoGeral = res.custo;
             melhorOrigemGeral = i;
         }
     }
-
     // --- RELATÓRIO FINAL ---
     cout << "\n" << setfill('=') << setw(60) << "" << endl;
     cout << "  ORIGEM   |   CUSTO   |   TEMPO (ms)" << endl;
