@@ -1,0 +1,7 @@
+# Ignora executáveis compilados no Linux
+main
+*.o
+*.out
+
+# Ignora a pasta de configurações locais do VS Code
+.vscode/
